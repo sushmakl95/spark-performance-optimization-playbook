@@ -1,0 +1,103 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spark-performance-optimization-playbook"
+version = "1.0.0"
+description = "Battle-tested Apache Spark tuning patterns with reproducible benchmarks"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "Sushma K L", email = "sushmakl95@gmail.com" }]
+keywords = ["spark", "pyspark", "performance", "optimization", "data-engineering", "benchmarks"]
+
+dependencies = [
+    "pyspark>=3.5.0,<3.6",
+    "delta-spark>=3.2.0,<3.3",
+    "pyarrow>=15.0.0",
+    "numpy>=1.26.0",
+    "pandas>=2.2.0",
+    "faker>=24.0.0",
+    "click>=8.1.7",
+    "structlog>=24.1.0",
+    "rich>=13.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.4.0",
+    "mypy>=1.9.0",
+    "bandit[toml]>=1.7.8",
+    "detect-secrets>=1.5.0",
+    "pre-commit>=3.7.0",
+    "jupyter>=1.0.0",
+    "jupyterlab>=4.1.0",
+]
+
+[project.scripts]
+spark-bench = "benchmarks.run_bench:cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["playbook*"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+# --------------------------------------------------------------------------
+# Ruff — battle-tested config from Repos 1, 2, 3
+# --------------------------------------------------------------------------
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+extend-exclude = [
+    "data/generated/*",
+    "notebooks/*",
+    "spark-warehouse/*",
+    "metastore_db/*",
+]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "C4", "UP", "RUF"]
+ignore = [
+    "E501", "N812", "S608", "RUF022", "UP042", "B008", "RUF012",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S", "RUF059", "B"]
+"scripts/*" = ["S603", "S607"]
+"benchmarks/*" = ["S603", "S607"]
+"**/__init__.py" = ["F401"]
+
+# Prevent first-party/third-party confusion for pyspark, delta, etc.
+[tool.ruff.lint.isort]
+known-third-party = ["pyspark", "delta", "pyarrow", "pandas", "numpy", "faker"]
+known-first-party = ["playbook", "benchmarks"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = false
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+exclude = ["tests/", "notebooks/"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q --strict-markers"
+testpaths = ["tests"]
+markers = [
+    "unit: fast unit tests",
+    "bench: performance benchmarks (slow)",
+]
+
+[tool.bandit]
+exclude_dirs = ["tests", "scripts", "benchmarks", "notebooks"]
+skips = ["B101", "B608"]

@@ -1,0 +1,61 @@
+# Optional: realistic local Spark cluster.
+# 1 master + 3 workers. Use when benchmarking *network shuffle* behaviors.
+# Skip for development — local[*] is faster for iteration.
+#
+# Bring up:  docker compose -f compose/docker-compose.yml up -d
+# Tear down: docker compose -f compose/docker-compose.yml down
+# Spark UI:  http://localhost:8080
+
+version: "3.8"
+
+services:
+  spark-master:
+    image: bitnami/spark:3.5
+    container_name: spark-master
+    environment:
+      SPARK_MODE: master
+      SPARK_RPC_AUTHENTICATION_ENABLED: "no"
+      SPARK_RPC_ENCRYPTION_ENABLED: "no"
+      SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED: "no"
+      SPARK_SSL_ENABLED: "no"
+    ports:
+      - "8080:8080"   # Master UI
+      - "7077:7077"   # Master connection port
+    volumes:
+      - ../data:/data:ro
+
+  spark-worker-1:
+    image: bitnami/spark:3.5
+    container_name: spark-worker-1
+    depends_on: [spark-master]
+    environment:
+      SPARK_MODE: worker
+      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_WORKER_MEMORY: 2G
+      SPARK_WORKER_CORES: 2
+    volumes:
+      - ../data:/data:ro
+
+  spark-worker-2:
+    image: bitnami/spark:3.5
+    container_name: spark-worker-2
+    depends_on: [spark-master]
+    environment:
+      SPARK_MODE: worker
+      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_WORKER_MEMORY: 2G
+      SPARK_WORKER_CORES: 2
+    volumes:
+      - ../data:/data:ro
+
+  spark-worker-3:
+    image: bitnami/spark:3.5
+    container_name: spark-worker-3
+    depends_on: [spark-master]
+    environment:
+      SPARK_MODE: worker
+      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_WORKER_MEMORY: 2G
+      SPARK_WORKER_CORES: 2
+    volumes:
+      - ../data:/data:ro

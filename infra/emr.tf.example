@@ -1,0 +1,126 @@
+# Reference EMR cluster configuration — sized for the tuning rules in
+# docs/DECISION_TREE.md:
+#   - 4-5 cores per executor
+#   - 4-8 GB per executor
+#   - AQE + skew join + Kryo serializer
+#   - Right-sized shuffle partitions
+#
+# Copy to emr.tf, fill in the commented placeholders, then:
+#   terraform init
+#   terraform plan
+#   terraform apply
+
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.30"
+    }
+  }
+}
+
+resource "aws_emr_cluster" "benchmarks" {
+  name          = "spark-playbook-bench"
+  release_label = "emr-7.0.0"
+  applications  = ["Spark", "Hive"]
+
+  service_role = var.emr_service_role_arn
+  log_uri      = "s3://${var.logs_bucket}/emr-logs/"
+
+  ec2_attributes {
+    subnet_id                         = var.subnet_id
+    emr_managed_master_security_group = var.master_sg_id
+    emr_managed_slave_security_group  = var.slave_sg_id
+    instance_profile                  = var.instance_profile_arn
+  }
+
+  # Master: m5.xlarge = 4 cores / 16GB — room for driver heap + broadcast storage
+  master_instance_group {
+    instance_type  = "m5.xlarge"
+    instance_count = 1
+  }
+
+  # Core nodes: m5.2xlarge = 8 cores / 32GB each
+  # Right-sized for ~1 executor of 4 cores × 14GB + 4 cores reserved for YARN/OS
+  core_instance_group {
+    instance_type  = "m5.2xlarge"
+    instance_count = 3
+    ebs_config {
+      size                 = 100
+      type                 = "gp3"
+      volumes_per_instance = 1
+    }
+  }
+
+  # Spark + YARN configuration — the knobs that matter for performance
+  configurations_json = jsonencode([
+    {
+      Classification = "spark-defaults"
+      Properties = {
+        # Serializer
+        "spark.serializer"                   = "org.apache.spark.serializer.KryoSerializer"
+        "spark.kryoserializer.buffer.max"    = "512m"
+
+        # Executor sizing (4 cores, 14GB each; 2 executors per 8-core node)
+        "spark.executor.cores"               = "4"
+        "spark.executor.memory"              = "14g"
+        "spark.executor.memoryOverhead"      = "2g"
+
+        # Shuffle — default 200 is too many for small/medium batches
+        "spark.sql.shuffle.partitions"       = "24"  # ~2x total cores (3 × 8 = 24)
+
+        # Adaptive Query Execution — free wins
+        "spark.sql.adaptive.enabled"                         = "true"
+        "spark.sql.adaptive.coalescePartitions.enabled"      = "true"
+        "spark.sql.adaptive.skewJoin.enabled"                = "true"
+        "spark.sql.adaptive.skewJoin.skewedPartitionFactor"  = "5"
+
+        # Broadcast threshold bumped from 10MB → 100MB
+        "spark.sql.autoBroadcastJoinThreshold" = "104857600"
+
+        # Cost-based optimizer
+        "spark.sql.cbo.enabled"                   = "true"
+        "spark.sql.cbo.joinReorder.enabled"       = "true"
+        "spark.sql.statistics.histogram.enabled"  = "true"
+
+        # S3 optimization
+        "spark.hadoop.fs.s3a.fast.upload"               = "true"
+        "spark.hadoop.fs.s3a.block.size"                = "134217728"  # 128MB
+        "spark.hadoop.fs.s3a.multipart.size"            = "104857600"  # 100MB
+        "spark.hadoop.fs.s3a.committer.name"            = "directory"
+        "spark.hadoop.fs.s3a.committer.staging.conflict-mode" = "append"
+      }
+    },
+    {
+      Classification = "yarn-site"
+      Properties = {
+        "yarn.nodemanager.vmem-check-enabled" = "false"
+        "yarn.nodemanager.pmem-check-enabled" = "false"
+      }
+    }
+  ])
+
+  tags = {
+    Project     = "spark-performance-playbook"
+    Environment = var.environment
+  }
+}
+
+# -----------------------------------------------------------------------------
+# Variables — fill in via terraform.tfvars
+# -----------------------------------------------------------------------------
+variable "environment" { type = string }
+variable "subnet_id" { type = string }
+variable "master_sg_id" { type = string }
+variable "slave_sg_id" { type = string }
+variable "instance_profile_arn" { type = string }
+variable "emr_service_role_arn" { type = string }
+variable "logs_bucket" { type = string }
+
+output "cluster_id" {
+  value = aws_emr_cluster.benchmarks.id
+}
+
+output "master_public_dns" {
+  value = aws_emr_cluster.benchmarks.master_public_dns
+}
