@@ -1,6 +1,6 @@
 """Benchmark: Executor count and memory sizing.
 
-The question: on a fixed budget of cores × memory, does it help more to have
+The question: on a fixed budget of cores x memory, does it help more to have
   (a) MANY small executors, or
   (b) FEW large executors?
 

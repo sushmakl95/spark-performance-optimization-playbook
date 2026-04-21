@@ -3,18 +3,18 @@
 The question this answers: when a join has hot keys that dwarf the rest, how
 much does manual salting help?
 
-Setup: skewed orders (30% of orders attributed to 0.1% of customers — classic
+Setup: skewed orders (30% of orders attributed to 0.1% of customers -- classic
 "power law" user distribution). Joining orders to customers on customer_id.
 
-Without salting, one reducer gets ~300k rows while others get ~100 each → the
+Without salting, one reducer gets ~300k rows while others get ~100 each -- the
 job is bottlenecked on that one reducer ("straggler").
 
 Salting strategy:
   1. Append a random 0-9 suffix to the hot side's key: (customer_id, salt)
   2. Explode the cold side: each customer_id becomes 10 rows with salts 0-9
-  3. Join on the composite key — now the hot customer's work spreads across 10 reducers
+  3. Join on the composite key -- the hot customer's work spreads across 10 reducers
 
-Trade-off: 10× the rows on the cold side. Only worth it when skew is severe.
+Trade-off: 10x the rows on the cold side. Only worth it when skew is severe.
 
 Modern escape hatch: Spark 3.x AQE with skew-join handling does this automatically.
 We benchmark both: manual salting vs AQE auto-skew.
@@ -29,7 +29,6 @@ from pyspark.sql import functions as F
 
 from playbook.benchmark import Benchmark, compare
 from playbook.spark_session import get_optimized_spark, get_spark
-
 
 SALT_BUCKETS = 10
 

@@ -8,7 +8,7 @@ Query: "give me orders in the last 30 days".
 
 Expected results:
   - full-scan: reads all 1000 days of parquet files
-  - pruned: reads only 30 days → ~33× less I/O
+  - pruned: reads only 30 days → ~33x less I/O
 
 Why this matters: most analytical queries have a date predicate. Getting
 partition pruning right is the single biggest win for time-series workloads.

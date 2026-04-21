@@ -3,7 +3,7 @@ statistical before/after comparison.
 
 Key principles baked in:
   1. **Always do a warm-up run**. JVM JIT + Spark codegen caches are cold on
-     first invocation; measuring that run distorts results by 2-3×.
+     first invocation; measuring that run distorts results by 2-3x.
   2. **Run N times, take median**. Spark timing has 10-30% noise from GC,
      network, S3 list throttling, etc. Median is robust.
   3. **Report Spark job metrics**, not just wall time — bytes scanned, shuffle
