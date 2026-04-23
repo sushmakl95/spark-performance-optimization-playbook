@@ -43,6 +43,9 @@ If you're a data engineer who wants to stop guessing and start measuring — thi
 | 8 | **Caching & checkpointing** | 2-10× | Multi-use intermediate DataFrames |
 | 9 | **Predicate pushdown** | 3-20× | Filtering on columnar formats |
 | 10 | **Storage format choice** | 3-8× | Parquet vs ORC vs Delta vs Iceberg |
+| 11 | **Liquid Clustering (Delta 3.2+)** | 2-5× on incremental OPTIMIZE | New Delta tables — replaces Z-ORDER; evolvable clustering keys |
+| 12 | **Deletion Vectors (Delta 3.x)** | 5-20× on DELETE/MERGE | GDPR deletes, CDC merge-on-read workloads |
+| 13 | **Apache DataFusion Comet** | 2-4× on analytic scans | Heavy parquet + aggregation workloads, no code change |
 
 Each technique has its own notebook in [`notebooks/`](notebooks/) showing before/after measurements.
 
